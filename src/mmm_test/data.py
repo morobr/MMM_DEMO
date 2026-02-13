@@ -3,9 +3,29 @@
 from pathlib import Path
 
 import kagglehub
+import numpy as np
 import pandas as pd
 
 from mmm_test.config import DATA_DIR, DATASET_ID, DROP_CHANNELS
+
+# MediaInvestment.csv values are in crores; multiply to get absolute rupees.
+_MEDIA_SCALE_FACTOR = 1e7
+
+# Column name mapping from MediaInvestment.csv to model column names.
+_MEDIA_COLUMN_RENAME = {
+    "Content Marketing": "Content.Marketing",
+    "Online marketing": "Online.marketing",
+}
+
+_CHANNEL_COLUMNS = [
+    "TV",
+    "Digital",
+    "Sponsorship",
+    "Content.Marketing",
+    "Online.marketing",
+    "Affiliates",
+    "SEM",
+]
 
 
 def download_dataset(force: bool = False) -> Path:
@@ -272,3 +292,279 @@ def validate_mmm_data(df: pd.DataFrame) -> None:
 
     if len(df) != 12:
         raise ValueError(f"Expected 12 monthly observations, got {len(df)}")
+
+
+# ---------------------------------------------------------------------------
+# Weekly aggregation functions
+# ---------------------------------------------------------------------------
+
+
+def aggregate_weekly_gmv(data_dir: Path) -> pd.DataFrame:
+    """Aggregate daily transactions from firstfile.csv into weekly totals.
+
+    Parameters
+    ----------
+    data_dir : Path
+        Path to the data directory containing firstfile.csv.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns ``Date`` (Monday of each week),
+        ``total_gmv`` and ``total_Discount``.
+
+    Raises
+    ------
+    FileNotFoundError
+        If firstfile.csv is not found.
+    """
+    filepath = data_dir / "firstfile.csv"
+    if not filepath.exists():
+        raise FileNotFoundError(f"firstfile.csv not found in {data_dir}")
+
+    df = pd.read_csv(filepath)
+    df["Date"] = pd.to_datetime(df["Date"])
+
+    # Floor each date to the Monday of its ISO week
+    df["week_start"] = df["Date"] - pd.to_timedelta(df["Date"].dt.weekday, unit="D")
+
+    weekly = (
+        df.groupby("week_start")
+        .agg(total_gmv=("gmv_new", "sum"), total_Discount=("discount", "sum"))
+        .reset_index()
+        .rename(columns={"week_start": "Date"})
+        .sort_values("Date")
+        .reset_index(drop=True)
+    )
+    return weekly
+
+
+def distribute_media_to_weekly(data_dir: Path, weekly_dates: pd.Series) -> pd.DataFrame:
+    """Pro-rata distribute monthly media spend across weeks.
+
+    Each week is assigned to the month that contains its Monday date.
+    Monthly spend is divided equally across all weeks in that month.
+
+    Parameters
+    ----------
+    data_dir : Path
+        Path to the data directory containing MediaInvestment.csv.
+    weekly_dates : pd.Series
+        Series of weekly Monday dates to distribute spend into.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with ``Date`` + 7 channel spend columns.
+
+    Raises
+    ------
+    FileNotFoundError
+        If MediaInvestment.csv is not found.
+    """
+    filepath = data_dir / "MediaInvestment.csv"
+    if not filepath.exists():
+        raise FileNotFoundError(f"MediaInvestment.csv not found in {data_dir}")
+
+    media = pd.read_csv(filepath)
+    # Fix column names: strip whitespace, rename to match model conventions
+    media.columns = media.columns.str.strip()
+    media = media.rename(columns=_MEDIA_COLUMN_RENAME)
+
+    # Build a month timestamp from Year + Month columns
+    media["month_start"] = pd.to_datetime(
+        media["Year"].astype(str) + "-" + media["Month"].astype(str) + "-01"
+    )
+
+    # Scale to absolute values and select only the 7 usable channels
+    channels = [c for c in _CHANNEL_COLUMNS if c in media.columns]
+    for ch in channels:
+        media[ch] = (
+            pd.to_numeric(media[ch], errors="coerce").fillna(0) * _MEDIA_SCALE_FACTOR
+        )
+
+    # Assign each week to its month (by Monday date)
+    weeks = pd.DataFrame({"Date": weekly_dates})
+    weeks["month_start"] = weeks["Date"].dt.to_period("M").dt.to_timestamp()
+
+    # Count weeks per month to compute equal split
+    weeks_per_month = weeks.groupby("month_start").size().rename("n_weeks")
+    media = media.merge(weeks_per_month, on="month_start", how="left")
+
+    # Divide monthly spend by number of weeks in that month
+    for ch in channels:
+        media[ch] = np.where(media["n_weeks"] > 0, media[ch] / media["n_weeks"], 0)
+
+    # Merge weekly spend back onto the week dates
+    result = weeks.merge(
+        media[["month_start", *channels]], on="month_start", how="left"
+    )
+    result = result.drop(columns=["month_start"])
+
+    # Fill any channels that had no media data with 0
+    for ch in channels:
+        result[ch] = result[ch].fillna(0)
+
+    return result
+
+
+def distribute_nps_to_weekly(data_dir: Path, weekly_dates: pd.Series) -> pd.DataFrame:
+    """Assign monthly NPS scores to weeks by month membership.
+
+    Each week receives the NPS score of the month its Monday falls in.
+
+    Parameters
+    ----------
+    data_dir : Path
+        Path to the data directory containing MonthlyNPSscore.csv.
+    weekly_dates : pd.Series
+        Series of weekly Monday dates.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with ``Date`` and ``NPS`` columns.
+
+    Raises
+    ------
+    FileNotFoundError
+        If MonthlyNPSscore.csv is not found.
+    """
+    filepath = data_dir / "MonthlyNPSscore.csv"
+    if not filepath.exists():
+        raise FileNotFoundError(f"MonthlyNPSscore.csv not found in {data_dir}")
+
+    nps = pd.read_csv(filepath)
+    nps["Date"] = pd.to_datetime(nps["Date"])
+    nps["month_start"] = nps["Date"].dt.to_period("M").dt.to_timestamp()
+
+    weeks = pd.DataFrame({"Date": weekly_dates})
+    weeks["month_start"] = weeks["Date"].dt.to_period("M").dt.to_timestamp()
+
+    result = weeks.merge(nps[["month_start", "NPS"]], on="month_start", how="left")
+    return result[["Date", "NPS"]]
+
+
+def compute_weekly_sale_days(data_dir: Path, weekly_dates: pd.Series) -> pd.DataFrame:
+    """Count special sale event days per week from SpecialSale.csv.
+
+    Parameters
+    ----------
+    data_dir : Path
+        Path to the data directory containing SpecialSale.csv.
+    weekly_dates : pd.Series
+        Series of weekly Monday dates.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with ``Date`` and ``sale_days`` columns.
+
+    Raises
+    ------
+    FileNotFoundError
+        If SpecialSale.csv is not found.
+    """
+    filepath = data_dir / "SpecialSale.csv"
+    if not filepath.exists():
+        raise FileNotFoundError(f"SpecialSale.csv not found in {data_dir}")
+
+    special = pd.read_csv(filepath)
+    special["Date"] = pd.to_datetime(special["Date"])
+
+    # Floor each sale event date to its week's Monday
+    special["week_start"] = special["Date"] - pd.to_timedelta(
+        special["Date"].dt.weekday, unit="D"
+    )
+
+    sale_counts = special.groupby("week_start").size().reset_index(name="sale_days")
+
+    weeks = pd.DataFrame({"Date": weekly_dates})
+    result = weeks.merge(sale_counts, left_on="Date", right_on="week_start", how="left")
+    result["sale_days"] = result["sale_days"].fillna(0).astype(int)
+    result = result.drop(columns=["week_start"], errors="ignore")
+    return result[["Date", "sale_days"]]
+
+
+def load_mmm_weekly_data(force_download: bool = False) -> pd.DataFrame:
+    """Load and prepare a weekly MMM dataset from raw data files.
+
+    Aggregates daily transactions to weekly GMV, pro-rata distributes
+    monthly media spend across weeks, assigns monthly NPS to weeks,
+    and counts weekly sale event days.
+
+    Parameters
+    ----------
+    force_download : bool, optional
+        If True, re-download even if data exists locally. Default is False.
+
+    Returns
+    -------
+    pd.DataFrame
+        The prepared weekly MMM dataset (~52 rows) with target,
+        7 media channels, and control variables.
+    """
+    data_dir = download_dataset(force=force_download)
+
+    # Step 1: Aggregate daily transactions to weekly
+    weekly_gmv = aggregate_weekly_gmv(data_dir)
+
+    # Step 2: Distribute monthly media spend across weeks
+    media = distribute_media_to_weekly(data_dir, weekly_gmv["Date"])
+
+    # Step 3: Assign monthly NPS to weeks
+    nps = distribute_nps_to_weekly(data_dir, weekly_gmv["Date"])
+
+    # Step 4: Count sale event days per week
+    sale_days = compute_weekly_sale_days(data_dir, weekly_gmv["Date"])
+
+    # Merge all together
+    df = weekly_gmv.merge(media, on="Date", how="left")
+    df = df.merge(nps, on="Date", how="left")
+    df = df.merge(sale_days, on="Date", how="left")
+
+    df["sale_days"] = df["sale_days"].fillna(0).astype(int)
+
+    # Drop boundary weeks that fall outside the monthly data coverage
+    # (e.g., a Monday in June when data starts in July)
+    df = df.dropna(subset=["NPS"]).reset_index(drop=True)
+
+    validate_mmm_weekly_data(df)
+    return df
+
+
+def validate_mmm_weekly_data(df: pd.DataFrame) -> None:
+    """Validate the prepared weekly MMM dataset.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataset to validate.
+
+    Raises
+    ------
+    ValueError
+        If expected columns are missing, target has nulls,
+        channel columns have nulls, or row count is outside 50-53.
+    """
+    required_columns = [
+        "Date",
+        "total_gmv",
+        *_CHANNEL_COLUMNS,
+        "NPS",
+        "total_Discount",
+        "sale_days",
+    ]
+    missing = [c for c in required_columns if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
+
+    if df["total_gmv"].isna().any():
+        raise ValueError("Target column 'total_gmv' contains null values")
+
+    for col in _CHANNEL_COLUMNS:
+        if df[col].isna().any():
+            raise ValueError(f"Channel column '{col}' contains null values")
+
+    if not 50 <= len(df) <= 53:
+        raise ValueError(f"Expected 50-53 weekly observations, got {len(df)}")

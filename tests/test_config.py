@@ -12,7 +12,7 @@ def test_default_config():
     assert "TV" in config.channel_columns
     assert "SEM" in config.channel_columns
     assert config.control_columns == ["NPS", "total_Discount", "sale_days"]
-    assert config.adstock_max_lag == 4
+    assert config.adstock_max_lag == 8
     assert config.target_accept == 0.95
     assert config.chains == 4
     assert config.draws == 1000

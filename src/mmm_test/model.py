@@ -104,7 +104,7 @@ def sample_prior_predictive(
     return model.idata
 
 
-def sample_posterior_predictive(model: MMM) -> az.InferenceData:
+def sample_posterior_predictive(model: MMM, x: pd.DataFrame) -> az.InferenceData:
     """Sample from the posterior predictive distribution.
 
     Call after fitting to check model's ability to reproduce observed data.
@@ -113,11 +113,13 @@ def sample_posterior_predictive(model: MMM) -> az.InferenceData:
     ----------
     model : MMM
         A fitted MMM model instance.
+    x : pd.DataFrame
+        Feature matrix used for fitting.
 
     Returns
     -------
     az.InferenceData
         Updated inference data with posterior predictive samples.
     """
-    model.sample_posterior_predictive()
+    model.sample_posterior_predictive(X=x)
     return model.idata

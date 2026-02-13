@@ -1,12 +1,18 @@
 """Tests for data module."""
 
+import numpy as np
 import pandas as pd
 import pytest
 
 from mmm_test.data import (
+    aggregate_weekly_gmv,
     compute_sale_days,
+    compute_weekly_sale_days,
+    distribute_media_to_weekly,
+    distribute_nps_to_weekly,
     preprocess,
     validate_mmm_data,
+    validate_mmm_weekly_data,
     validate_raw_data,
 )
 
@@ -105,3 +111,120 @@ def test_validate_mmm_data_null_channel(mmm_sample_dataframe):
     df.loc[0, "TV"] = None
     with pytest.raises(ValueError, match="TV"):
         validate_mmm_data(df)
+
+
+# ---------------------------------------------------------------------------
+# Weekly aggregation tests
+# ---------------------------------------------------------------------------
+
+
+def test_aggregate_weekly_gmv(tmp_path):
+    """Test weekly GMV aggregation from firstfile.csv."""
+    # Create a small firstfile.csv spanning 2 weeks
+    rows = []
+    for day in pd.date_range("2015-07-06", periods=14, freq="D"):
+        rows.append(f"{day.strftime('%Y-%m-%d')},No Promotion,1000,1,500,100")
+    csv_content = '"","Date","Sales_name","gmv_new","units","product_mrp","discount"\n'
+    for i, row in enumerate(rows):
+        csv_content += f"{i},{row}\n"
+    (tmp_path / "firstfile.csv").write_text(csv_content)
+
+    result = aggregate_weekly_gmv(tmp_path)
+    assert "Date" in result.columns
+    assert "total_gmv" in result.columns
+    assert "total_Discount" in result.columns
+    # 14 days starting Monday Jul 6 → 2 complete weeks
+    assert len(result) == 2
+    assert result["total_gmv"].sum() == 14000
+
+
+def test_aggregate_weekly_gmv_file_not_found(tmp_path):
+    """Test that aggregate_weekly_gmv raises when file is missing."""
+    with pytest.raises(FileNotFoundError):
+        aggregate_weekly_gmv(tmp_path)
+
+
+def test_distribute_media_to_weekly(tmp_path):
+    """Test pro-rata distribution of monthly media spend to weeks."""
+    media_csv = (
+        "Year,Month,Total Investment,TV,Digital,Sponsorship,"
+        "Content Marketing,Online marketing, Affiliates,SEM,Radio,Other\n"
+        "2015,7,10,2,1,3,0,1,0.5,2.5,,\n"
+    )
+    (tmp_path / "MediaInvestment.csv").write_text(media_csv)
+
+    # 4 Mondays in July 2015: Jul 6, 13, 20, 27
+    weekly_dates = pd.Series(
+        pd.to_datetime(["2015-07-06", "2015-07-13", "2015-07-20", "2015-07-27"])
+    )
+
+    result = distribute_media_to_weekly(tmp_path, weekly_dates)
+    assert len(result) == 4
+    assert "TV" in result.columns
+    # TV monthly = 2 * 1e7 = 2e7, split across 4 weeks = 5e6 each
+    np.testing.assert_allclose(result["TV"].values, 5e6, rtol=1e-6)
+
+
+def test_distribute_media_file_not_found(tmp_path):
+    """Test that distribute_media_to_weekly raises when file is missing."""
+    weekly_dates = pd.Series(pd.to_datetime(["2015-07-06"]))
+    with pytest.raises(FileNotFoundError):
+        distribute_media_to_weekly(tmp_path, weekly_dates)
+
+
+def test_distribute_nps_to_weekly(tmp_path):
+    """Test NPS assignment from monthly to weekly."""
+    nps_csv = "Date,NPS\n7/1/2015,54.6\n8/1/2015,60\n"
+    (tmp_path / "MonthlyNPSscore.csv").write_text(nps_csv)
+
+    weekly_dates = pd.Series(pd.to_datetime(["2015-07-06", "2015-07-13", "2015-08-03"]))
+    result = distribute_nps_to_weekly(tmp_path, weekly_dates)
+    assert result.loc[0, "NPS"] == 54.6
+    assert result.loc[1, "NPS"] == 54.6
+    assert result.loc[2, "NPS"] == 60
+
+
+def test_distribute_nps_file_not_found(tmp_path):
+    """Test that distribute_nps_to_weekly raises when file is missing."""
+    weekly_dates = pd.Series(pd.to_datetime(["2015-07-06"]))
+    with pytest.raises(FileNotFoundError):
+        distribute_nps_to_weekly(tmp_path, weekly_dates)
+
+
+def test_compute_weekly_sale_days(tmp_path):
+    """Test weekly sale day counting from SpecialSale.csv."""
+    # Two events in the same week (Mon Jul 13), one in another week (Mon Jul 20)
+    special_csv = (
+        "Date,Sales Name\n7/18/2015,Sale A\n7/19/2015,Sale A\n7/20/2015,Sale B\n"
+    )
+    (tmp_path / "SpecialSale.csv").write_text(special_csv)
+
+    # Jul 13 week contains Jul 18-19 (Sat-Sun), Jul 20 week contains Jul 20 (Mon)
+    weekly_dates = pd.Series(
+        pd.to_datetime(["2015-07-06", "2015-07-13", "2015-07-20", "2015-07-27"])
+    )
+    result = compute_weekly_sale_days(tmp_path, weekly_dates)
+    assert len(result) == 4
+    assert result.loc[0, "sale_days"] == 0  # Jul 6 week — no events
+    assert result.loc[1, "sale_days"] == 2  # Jul 13 week — Jul 18, 19
+    assert result.loc[2, "sale_days"] == 1  # Jul 20 week — Jul 20
+    assert result.loc[3, "sale_days"] == 0  # Jul 27 week — no events
+
+
+def test_validate_mmm_weekly_data_passes(mmm_weekly_sample_dataframe):
+    """Test validation passes for properly structured weekly data."""
+    validate_mmm_weekly_data(mmm_weekly_sample_dataframe)
+
+
+def test_validate_mmm_weekly_data_missing_column(mmm_weekly_sample_dataframe):
+    """Test validation fails when a required column is missing."""
+    df = mmm_weekly_sample_dataframe.drop(columns=["NPS"])
+    with pytest.raises(ValueError, match="Missing required columns"):
+        validate_mmm_weekly_data(df)
+
+
+def test_validate_mmm_weekly_data_wrong_row_count(mmm_weekly_sample_dataframe):
+    """Test validation fails when row count is outside 50-53."""
+    df = mmm_weekly_sample_dataframe.head(10)
+    with pytest.raises(ValueError, match="Expected 50-53"):
+        validate_mmm_weekly_data(df)

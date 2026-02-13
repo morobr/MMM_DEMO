@@ -29,8 +29,7 @@ class ModelConfig:
     control_columns : list[str]
         Non-marketing control variable columns.
     adstock_max_lag : int
-        Maximum lag for adstock carryover effect in time periods.
-        Set to 4 (not 8) due to small sample size (12 observations).
+        Maximum lag for adstock carryover effect in time periods (weeks).
     target_accept : float
         Target acceptance rate for MCMC sampling. Set to 0.95 to
         reduce divergences with small dataset.
@@ -62,7 +61,7 @@ class ModelConfig:
             "sale_days",
         ]
     )
-    adstock_max_lag: int = 4
+    adstock_max_lag: int = 8
     target_accept: float = 0.95
     chains: int = 4
     draws: int = 1000
@@ -71,8 +70,7 @@ class ModelConfig:
     def get_model_config(self) -> dict:
         """Return model_config dict with informative priors.
 
-        With only 12 observations, priors dominate the posterior. These
-        priors are calibrated for MaxAbsScaled data (channel and target
+        Priors are calibrated for MaxAbsScaled data (channel and target
         values scaled to [0, 1] internally by PyMC-Marketing).
 
         Returns

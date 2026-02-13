@@ -87,7 +87,7 @@ def plot_channel_contributions(model: MMM) -> Path:
     Path
         Path to the saved plot.
     """
-    fig = model.plot_channel_contributions()
+    fig = model.plot_components_contributions()
     if not isinstance(fig, plt.Figure):
         fig = fig.figure
     date_str = datetime.now().strftime("%Y-%m-%d")

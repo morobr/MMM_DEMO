@@ -73,6 +73,29 @@ def mmm_sample_dataframe() -> pd.DataFrame:
 
 
 @pytest.fixture
+def mmm_weekly_sample_dataframe() -> pd.DataFrame:
+    """Create synthetic weekly DataFrame mimicking the weekly MMM schema."""
+    n = 52
+    rng = np.random.default_rng(42)
+    return pd.DataFrame(
+        {
+            "Date": pd.date_range("2015-06-29", periods=n, freq="W-MON"),
+            "total_gmv": rng.uniform(2e7, 1.5e8, n),
+            "TV": rng.uniform(0, 2.5e7, n),
+            "Digital": rng.uniform(1e6, 3e7, n),
+            "Sponsorship": rng.uniform(2e6, 2e8, n),
+            "Content.Marketing": rng.uniform(0, 8e6, n),
+            "Online.marketing": rng.uniform(2e5, 6e7, n),
+            "Affiliates": rng.uniform(2e5, 1.8e7, n),
+            "SEM": rng.uniform(1e6, 8e7, n),
+            "NPS": rng.uniform(44, 60, n),
+            "total_Discount": rng.uniform(2e7, 1e8, n),
+            "sale_days": rng.integers(0, 5, n),
+        }
+    )
+
+
+@pytest.fixture
 def mock_idata() -> MagicMock:
     """Create a mock ArviZ InferenceData with passing diagnostics."""
     idata = MagicMock()
