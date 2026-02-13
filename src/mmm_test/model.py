@@ -13,7 +13,7 @@ def build_model(config: ModelConfig) -> MMM:
     Parameters
     ----------
     config : ModelConfig
-        Model configuration with channels, controls, and hyperparameters.
+        Model configuration with channels, controls, priors, and hyperparameters.
 
     Returns
     -------
@@ -31,9 +31,10 @@ def build_model(config: ModelConfig) -> MMM:
     model = MMM(
         date_column=config.date_column,
         channel_columns=config.channel_columns,
-        control_columns=config.control_columns,
+        control_columns=config.control_columns if config.control_columns else None,
         adstock=GeometricAdstock(l_max=config.adstock_max_lag),
         saturation=LogisticSaturation(),
+        model_config=config.get_model_config(),
     )
     return model
 
@@ -53,7 +54,7 @@ def fit_model(
     x : pd.DataFrame
         Feature matrix with date, channel, and control columns.
     y : pd.Series
-        Target variable (sales).
+        Target variable (total_gmv).
     config : ModelConfig
         Model configuration with sampling parameters.
 
@@ -70,4 +71,53 @@ def fit_model(
         tune=config.tune,
         target_accept=config.target_accept,
     )
+    return model.idata
+
+
+def sample_prior_predictive(
+    model: MMM,
+    x: pd.DataFrame,
+    y: pd.Series,
+    samples: int = 500,
+) -> az.InferenceData:
+    """Sample from the prior predictive distribution.
+
+    Call before fitting to verify that priors produce plausible target values.
+
+    Parameters
+    ----------
+    model : MMM
+        An initialized (unfitted) MMM model instance.
+    x : pd.DataFrame
+        Feature matrix with date, channel, and control columns.
+    y : pd.Series
+        Target variable (for building the model graph).
+    samples : int, optional
+        Number of prior predictive samples, by default 500.
+
+    Returns
+    -------
+    az.InferenceData
+        Prior predictive samples.
+    """
+    model.sample_prior_predictive(X=x, y=y, samples=samples)
+    return model.idata
+
+
+def sample_posterior_predictive(model: MMM) -> az.InferenceData:
+    """Sample from the posterior predictive distribution.
+
+    Call after fitting to check model's ability to reproduce observed data.
+
+    Parameters
+    ----------
+    model : MMM
+        A fitted MMM model instance.
+
+    Returns
+    -------
+    az.InferenceData
+        Updated inference data with posterior predictive samples.
+    """
+    model.sample_posterior_predictive()
     return model.idata

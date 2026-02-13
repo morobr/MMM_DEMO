@@ -26,8 +26,14 @@ def sample_config() -> ModelConfig:
 
 
 @pytest.fixture
+def real_config() -> ModelConfig:
+    """Create a ModelConfig with actual dataset defaults."""
+    return ModelConfig()
+
+
+@pytest.fixture
 def sample_dataframe() -> pd.DataFrame:
-    """Create a small synthetic DataFrame mimicking the DT Mart schema."""
+    """Create a small synthetic DataFrame for generic tests."""
     n_weeks = 52
     rng = np.random.default_rng(42)
 
@@ -39,6 +45,29 @@ def sample_dataframe() -> pd.DataFrame:
             "radio_spend": rng.uniform(200, 2000, n_weeks),
             "digital_spend": rng.uniform(300, 3000, n_weeks),
             "price": rng.uniform(8, 15, n_weeks),
+        }
+    )
+
+
+@pytest.fixture
+def mmm_sample_dataframe() -> pd.DataFrame:
+    """Create synthetic DataFrame mimicking the actual DT Mart MMM schema."""
+    n = 12
+    rng = np.random.default_rng(42)
+    return pd.DataFrame(
+        {
+            "Date": pd.date_range("2015-07-01", periods=n, freq="MS"),
+            "total_gmv": rng.uniform(1.5e8, 5.5e8, n),
+            "TV": rng.uniform(0, 9.3e7, n),
+            "Digital": rng.uniform(5e6, 1.26e8, n),
+            "Sponsorship": rng.uniform(1.1e7, 8.47e8, n),
+            "Content.Marketing": rng.uniform(0, 3.4e7, n),
+            "Online.marketing": rng.uniform(1e6, 2.44e8, n),
+            "Affiliates": rng.uniform(1e6, 7.4e7, n),
+            "SEM": rng.uniform(5e6, 3.19e8, n),
+            "NPS": rng.uniform(44, 60, n),
+            "total_Discount": rng.uniform(1.2e8, 4.2e8, n),
+            "sale_days": rng.integers(0, 10, n),
         }
     )
 

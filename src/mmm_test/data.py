@@ -5,7 +5,7 @@ from pathlib import Path
 import kagglehub
 import pandas as pd
 
-from mmm_test.config import DATA_DIR, DATASET_ID
+from mmm_test.config import DATA_DIR, DATASET_ID, DROP_CHANNELS
 
 
 def download_dataset(force: bool = False) -> Path:
@@ -125,3 +125,150 @@ def preprocess(df: pd.DataFrame, date_column: str, target_column: str) -> pd.Dat
         )
 
     return df
+
+
+def load_secondfile(force_download: bool = False) -> pd.DataFrame:
+    """Load Secondfile.csv (monthly aggregated MMM-ready dataset).
+
+    Parameters
+    ----------
+    force_download : bool, optional
+        If True, re-download even if data exists locally. Default is False.
+
+    Returns
+    -------
+    pd.DataFrame
+        The monthly dataset with validated schema.
+
+    Raises
+    ------
+    FileNotFoundError
+        If Secondfile.csv is not found.
+    """
+    data_dir = download_dataset(force=force_download)
+    filepath = data_dir / "Secondfile.csv"
+    if not filepath.exists():
+        raise FileNotFoundError(f"Secondfile.csv not found in {data_dir}")
+
+    df = pd.read_csv(filepath)
+    df = df.drop(columns=["Unnamed: 0"], errors="ignore")
+    df["Date"] = pd.to_datetime(df["Date"])
+    df = df.sort_values("Date").reset_index(drop=True)
+    validate_raw_data(df)
+    return df
+
+
+def compute_sale_days(data_dir: Path) -> pd.DataFrame:
+    """Compute number of special sale days per month from SpecialSale.csv.
+
+    Parameters
+    ----------
+    data_dir : Path
+        Path to the data directory containing SpecialSale.csv.
+
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with 'Date' (monthly timestamp) and 'sale_days' columns.
+        Months without sale events are not included.
+
+    Raises
+    ------
+    FileNotFoundError
+        If SpecialSale.csv is not found.
+    """
+    filepath = data_dir / "SpecialSale.csv"
+    if not filepath.exists():
+        raise FileNotFoundError(f"SpecialSale.csv not found in {data_dir}")
+
+    special = pd.read_csv(filepath)
+    special["Date"] = pd.to_datetime(special["Date"])
+
+    sale_days = (
+        special.groupby(special["Date"].dt.to_period("M"))
+        .size()
+        .reset_index(name="sale_days")
+    )
+    sale_days["Date"] = sale_days["Date"].dt.to_timestamp()
+    return sale_days
+
+
+def load_mmm_data(force_download: bool = False) -> pd.DataFrame:
+    """Load and prepare the full MMM dataset with sale_days control variable.
+
+    Loads Secondfile.csv, computes sale_days from SpecialSale.csv, merges them,
+    and drops channels with excessive missing data (Radio, Other).
+
+    Parameters
+    ----------
+    force_download : bool, optional
+        If True, re-download even if data exists locally. Default is False.
+
+    Returns
+    -------
+    pd.DataFrame
+        The prepared MMM dataset (12 rows) with target, 7 media channels,
+        and control variables.
+    """
+    data_dir = download_dataset(force=force_download)
+    df = load_secondfile()
+    sale_days = compute_sale_days(data_dir)
+
+    df = df.merge(sale_days, on="Date", how="left")
+    df["sale_days"] = df["sale_days"].fillna(0).astype(int)
+    df = df.drop(columns=DROP_CHANNELS, errors="ignore")
+
+    validate_mmm_data(df)
+    return df
+
+
+def validate_mmm_data(df: pd.DataFrame) -> None:
+    """Validate the prepared MMM dataset.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataset to validate.
+
+    Raises
+    ------
+    ValueError
+        If expected columns are missing, target has nulls,
+        channel columns have nulls, or row count is not 12.
+    """
+    required_columns = [
+        "Date",
+        "total_gmv",
+        "TV",
+        "Digital",
+        "Sponsorship",
+        "Content.Marketing",
+        "Online.marketing",
+        "Affiliates",
+        "SEM",
+        "NPS",
+        "total_Discount",
+        "sale_days",
+    ]
+    missing = [c for c in required_columns if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
+
+    if df["total_gmv"].isna().any():
+        raise ValueError("Target column 'total_gmv' contains null values")
+
+    channel_cols = [
+        "TV",
+        "Digital",
+        "Sponsorship",
+        "Content.Marketing",
+        "Online.marketing",
+        "Affiliates",
+        "SEM",
+    ]
+    for col in channel_cols:
+        if df[col].isna().any():
+            raise ValueError(f"Channel column '{col}' contains null values")
+
+    if len(df) != 12:
+        raise ValueError(f"Expected 12 monthly observations, got {len(df)}")

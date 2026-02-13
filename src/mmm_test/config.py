@@ -3,10 +3,15 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from pymc_marketing.prior import Prior
+
 # Dataset
 DATASET_ID = "datatattle/dt-mart-market-mix-modeling"
 DATA_DIR = Path("data")
 OUTPUTS_DIR = Path("outputs")
+
+# Channels excluded due to excessive missing data (9/12 NaN)
+DROP_CHANNELS: list[str] = ["Radio", "Other"]
 
 
 @dataclass
@@ -18,16 +23,17 @@ class ModelConfig:
     date_column : str
         Name of the date/time column in the dataset.
     target_column : str
-        Name of the target variable column (e.g., sales/revenue).
+        Name of the target variable column.
     channel_columns : list[str]
         Marketing channel spend columns to model.
     control_columns : list[str]
         Non-marketing control variable columns.
     adstock_max_lag : int
         Maximum lag for adstock carryover effect in time periods.
+        Set to 4 (not 8) due to small sample size (12 observations).
     target_accept : float
-        Target acceptance rate for MCMC sampling. Higher values (0.9-0.99)
-        reduce divergences but slow sampling.
+        Target acceptance rate for MCMC sampling. Set to 0.95 to
+        reduce divergences with small dataset.
     chains : int
         Number of MCMC chains to run.
     draws : int
@@ -36,12 +42,49 @@ class ModelConfig:
         Number of tuning steps per chain.
     """
 
-    date_column: str = "date"
-    target_column: str = "sales"
-    channel_columns: list[str] = field(default_factory=list)
-    control_columns: list[str] = field(default_factory=list)
-    adstock_max_lag: int = 8
-    target_accept: float = 0.9
+    date_column: str = "Date"
+    target_column: str = "total_gmv"
+    channel_columns: list[str] = field(
+        default_factory=lambda: [
+            "TV",
+            "Digital",
+            "Sponsorship",
+            "Content.Marketing",
+            "Online.marketing",
+            "Affiliates",
+            "SEM",
+        ]
+    )
+    control_columns: list[str] = field(
+        default_factory=lambda: [
+            "NPS",
+            "total_Discount",
+            "sale_days",
+        ]
+    )
+    adstock_max_lag: int = 4
+    target_accept: float = 0.95
     chains: int = 4
     draws: int = 1000
     tune: int = 1000
+
+    def get_model_config(self) -> dict:
+        """Return model_config dict with informative priors.
+
+        With only 12 observations, priors dominate the posterior. These
+        priors are calibrated for MaxAbsScaled data (channel and target
+        values scaled to [0, 1] internally by PyMC-Marketing).
+
+        Returns
+        -------
+        dict
+            Prior specifications keyed by parameter name.
+        """
+        return {
+            "intercept": Prior("Normal", mu=0, sigma=2),
+            "likelihood": Prior("Normal", sigma=Prior("HalfNormal", sigma=0.5)),
+            "adstock_alpha": Prior("Beta", alpha=1, beta=3),
+            "saturation_lam": Prior("Gamma", alpha=3, beta=1),
+            "saturation_beta": Prior("HalfNormal", sigma=2),
+            "gamma_control": Prior("Normal", mu=0, sigma=2, dims="control"),
+        }

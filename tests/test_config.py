@@ -4,13 +4,16 @@ from mmm_test.config import ModelConfig
 
 
 def test_default_config():
-    """Test that ModelConfig has sensible defaults."""
+    """Test that ModelConfig has sensible defaults for the DT Mart dataset."""
     config = ModelConfig()
-    assert config.date_column == "date"
-    assert config.target_column == "sales"
-    assert config.channel_columns == []
-    assert config.control_columns == []
-    assert config.adstock_max_lag == 8
+    assert config.date_column == "Date"
+    assert config.target_column == "total_gmv"
+    assert len(config.channel_columns) == 7
+    assert "TV" in config.channel_columns
+    assert "SEM" in config.channel_columns
+    assert config.control_columns == ["NPS", "total_Discount", "sale_days"]
+    assert config.adstock_max_lag == 4
+    assert config.target_accept == 0.95
     assert config.chains == 4
     assert config.draws == 1000
 
@@ -29,5 +32,18 @@ def test_config_independent_instances():
     """Test that mutable defaults are independent between instances."""
     config1 = ModelConfig()
     config2 = ModelConfig()
-    config1.channel_columns.append("tv")
-    assert config2.channel_columns == []
+    config1.channel_columns.append("new_channel")
+    assert "new_channel" not in config2.channel_columns
+
+
+def test_get_model_config():
+    """Test that get_model_config returns a dict with expected prior keys."""
+    config = ModelConfig()
+    mc = config.get_model_config()
+    assert isinstance(mc, dict)
+    assert "intercept" in mc
+    assert "likelihood" in mc
+    assert "adstock_alpha" in mc
+    assert "saturation_lam" in mc
+    assert "saturation_beta" in mc
+    assert "gamma_control" in mc
