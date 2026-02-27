@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from mmm_test.diagnostics import (
+from mmm_demo.diagnostics import (
     ESS_THRESHOLD,
     RHAT_THRESHOLD,
     check_convergence,
@@ -19,7 +19,7 @@ from mmm_test.diagnostics import (
 def _good_summary():
     """Mock az.summary returning passing diagnostics."""
     summary_df = pd.DataFrame({"r_hat": [1.0, 1.001], "ess_bulk": [500.0, 600.0]})
-    with patch("mmm_test.diagnostics.az.summary", return_value=summary_df):
+    with patch("mmm_demo.diagnostics.az.summary", return_value=summary_df):
         yield
 
 
@@ -27,7 +27,7 @@ def _good_summary():
 def _bad_rhat_summary():
     """Mock az.summary returning failing R-hat."""
     summary_df = pd.DataFrame({"r_hat": [1.05, 1.001], "ess_bulk": [500.0, 600.0]})
-    with patch("mmm_test.diagnostics.az.summary", return_value=summary_df):
+    with patch("mmm_demo.diagnostics.az.summary", return_value=summary_df):
         yield
 
 
@@ -35,7 +35,7 @@ def _bad_rhat_summary():
 def _bad_ess_summary():
     """Mock az.summary returning failing ESS."""
     summary_df = pd.DataFrame({"r_hat": [1.0, 1.001], "ess_bulk": [100.0, 200.0]})
-    with patch("mmm_test.diagnostics.az.summary", return_value=summary_df):
+    with patch("mmm_demo.diagnostics.az.summary", return_value=summary_df):
         yield
 
 

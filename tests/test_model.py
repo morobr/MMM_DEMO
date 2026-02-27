@@ -2,8 +2,8 @@
 
 import pytest
 
-from mmm_test.config import ModelConfig
-from mmm_test.model import build_model, sample_prior_predictive
+from mmm_demo.config import ModelConfig
+from mmm_demo.model import build_model, sample_prior_predictive
 
 
 def test_build_model_returns_mmm(real_config):

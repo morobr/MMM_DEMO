@@ -6,7 +6,7 @@ import kagglehub
 import numpy as np
 import pandas as pd
 
-from mmm_test.config import DATA_DIR, DATASET_ID, DROP_CHANNELS
+from mmm_demo.config import DATA_DIR, DATASET_ID, DROP_CHANNELS
 
 # Channel groups to reduce multicollinearity.
 # Digital+SEM+Content.Marketing (r>0.91), Online.marketing+Affiliates (r=0.99).
@@ -282,7 +282,7 @@ def load_mmm_data(force_download: bool = False) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        The prepared MMM dataset (12 rows) with target, 7 media channels,
+        The prepared MMM dataset (12 rows) with target, 4 grouped media channels,
         and control variables.
     """
     data_dir = download_dataset(force=force_download)
@@ -292,6 +292,7 @@ def load_mmm_data(force_download: bool = False) -> pd.DataFrame:
     df = df.merge(sale_days, on="Date", how="left")
     df["sale_days"] = df["sale_days"].fillna(0).astype(int)
     df = df.drop(columns=DROP_CHANNELS, errors="ignore")
+    df = aggregate_channel_groups(df)
 
     validate_mmm_data(df)
     return df
@@ -314,13 +315,7 @@ def validate_mmm_data(df: pd.DataFrame) -> None:
     required_columns = [
         "Date",
         "total_gmv",
-        "TV",
-        "Digital",
-        "Sponsorship",
-        "Content.Marketing",
-        "Online.marketing",
-        "Affiliates",
-        "SEM",
+        *_GROUPED_CHANNEL_COLUMNS,
         "NPS",
         "total_Discount",
         "sale_days",
@@ -332,15 +327,7 @@ def validate_mmm_data(df: pd.DataFrame) -> None:
     if df["total_gmv"].isna().any():
         raise ValueError("Target column 'total_gmv' contains null values")
 
-    channel_cols = [
-        "TV",
-        "Digital",
-        "Sponsorship",
-        "Content.Marketing",
-        "Online.marketing",
-        "Affiliates",
-        "SEM",
-    ]
+    channel_cols = _GROUPED_CHANNEL_COLUMNS
     for col in channel_cols:
         if df[col].isna().any():
             raise ValueError(f"Channel column '{col}' contains null values")

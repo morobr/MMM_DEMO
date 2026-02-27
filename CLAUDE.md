@@ -1,4 +1,4 @@
-# mmm_test
+# mmm_demo
 
 Marketing Mix Modeling project using Bayesian inference to analyze marketing channel effectiveness. Built on PyMC-Marketing with the DT Mart dataset from KaggleHub. The project identifies channel contributions to sales, models adstock and saturation effects, explains channel behavior, and optimizes marketing investment allocation.
 
@@ -19,7 +19,7 @@ Marketing Mix Modeling project using Bayesian inference to analyze marketing cha
 ## Project Structure
 
 ```
-mmm_test/
+mmm_demo/
 ├── CLAUDE.md
 ├── pyproject.toml
 ├── uv.lock
@@ -31,7 +31,7 @@ mmm_test/
 │       └── ci.yml                  # ruff check + ruff format --check + pytest
 ├── notebooks/                      # Jupyter notebooks for exploration
 ├── src/
-│   └── mmm_test/
+│   └── mmm_demo/
 │       ├── __init__.py
 │       ├── config.py               # Model hyperparameters, channel definitions, priors, constants
 │       ├── data.py                 # Data loading, downloading, and preprocessing
@@ -71,7 +71,7 @@ mmm_test/
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd mmm_test
+cd mmm_demo
 
 # Install uv (if not already installed)
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -91,7 +91,7 @@ uv run python -c "import pymc_marketing; print(pymc_marketing.__version__)"
 Data is NOT committed to the repository. The `data.py` module downloads it automatically:
 
 ```python
-from mmm_test.data import load_data
+from mmm_demo.data import load_data
 
 df = load_data()  # Downloads from KaggleHub if data/ is empty, then loads and validates
 ```
@@ -278,7 +278,7 @@ Ruff handles import sorting automatically. The order is:
 
 1. Standard library
 2. Third-party packages
-3. Local imports (`from mmm_test import ...`)
+3. Local imports (`from mmm_demo import ...`)
 
 ## Testing
 
@@ -292,12 +292,12 @@ Ruff handles import sorting automatically. The order is:
 
 | Module | Test File |
 |--------|-----------|
-| `src/mmm_test/config.py` | `tests/test_config.py` |
-| `src/mmm_test/data.py` | `tests/test_data.py` |
-| `src/mmm_test/model.py` | `tests/test_model.py` |
-| `src/mmm_test/diagnostics.py` | `tests/test_diagnostics.py` |
-| `src/mmm_test/optimization.py` | `tests/test_optimization.py` |
-| `src/mmm_test/plotting.py` | `tests/test_plotting.py` |
+| `src/mmm_demo/config.py` | `tests/test_config.py` |
+| `src/mmm_demo/data.py` | `tests/test_data.py` |
+| `src/mmm_demo/model.py` | `tests/test_model.py` |
+| `src/mmm_demo/diagnostics.py` | `tests/test_diagnostics.py` |
+| `src/mmm_demo/optimization.py` | `tests/test_optimization.py` |
+| `src/mmm_demo/plotting.py` | `tests/test_plotting.py` |
 
 ### Testing Approach
 

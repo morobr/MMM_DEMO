@@ -28,7 +28,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mmm_test"]
+packages = ["src/mmm_demo"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -54,7 +54,7 @@ select = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["mmm_test"]
+known-first-party = ["mmm_demo"]
 
 [tool.ruff.lint.per-file-ignores]
 "notebooks/**" = ["E402", "E501", "B007", "RUF001", "RUF005"]

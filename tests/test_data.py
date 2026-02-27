@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from mmm_test.data import (
+from mmm_demo.data import (
     aggregate_channel_groups,
     aggregate_weekly_gmv,
     compute_sale_days,

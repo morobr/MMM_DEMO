@@ -4,7 +4,7 @@ import arviz as az
 import pandas as pd
 from pymc_marketing.mmm import MMM, GeometricAdstock, LogisticSaturation
 
-from mmm_test.config import ModelConfig
+from mmm_demo.config import ModelConfig
 
 
 def build_model(config: ModelConfig) -> MMM:

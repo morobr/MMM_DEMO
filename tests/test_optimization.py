@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from mmm_test.optimization import optimize_budget
+from mmm_demo.optimization import optimize_budget
 
 
 def test_optimize_budget_unfitted_model():

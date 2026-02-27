@@ -7,7 +7,7 @@ import pandas as pd
 import pytest
 import xarray as xr
 
-from mmm_test.config import ModelConfig
+from mmm_demo.config import ModelConfig
 
 
 @pytest.fixture

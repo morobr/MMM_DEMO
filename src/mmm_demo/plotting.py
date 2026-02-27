@@ -7,7 +7,7 @@ import arviz as az
 import matplotlib.pyplot as plt
 from pymc_marketing.mmm import MMM
 
-from mmm_test.config import OUTPUTS_DIR
+from mmm_demo.config import OUTPUTS_DIR
 
 
 def _save_plot(fig: plt.Figure, subdir: str, name: str) -> Path:

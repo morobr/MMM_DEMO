@@ -1,6 +1,6 @@
 """Tests for config module."""
 
-from mmm_test.config import ModelConfig
+from mmm_demo.config import ModelConfig
 
 
 def test_default_config():

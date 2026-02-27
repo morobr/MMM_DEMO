@@ -2,7 +2,7 @@
 
 from unittest.mock import patch
 
-from mmm_test.plotting import _save_plot
+from mmm_demo.plotting import _save_plot
 
 
 def test_save_plot_creates_file(tmp_path):
@@ -12,7 +12,7 @@ def test_save_plot_creates_file(tmp_path):
     fig, ax = plt.subplots()
     ax.plot([1, 2, 3])
 
-    with patch("mmm_test.plotting.OUTPUTS_DIR", tmp_path):
+    with patch("mmm_demo.plotting.OUTPUTS_DIR", tmp_path):
         path = _save_plot(fig, "diagnostics", "test_plot")
 
     assert path.exists()
