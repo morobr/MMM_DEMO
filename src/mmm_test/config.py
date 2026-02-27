@@ -46,12 +46,9 @@ class ModelConfig:
     channel_columns: list[str] = field(
         default_factory=lambda: [
             "TV",
-            "Digital",
             "Sponsorship",
-            "Content.Marketing",
-            "Online.marketing",
-            "Affiliates",
-            "SEM",
+            "Digital",
+            "Online",
         ]
     )
     control_columns: list[str] = field(
@@ -61,11 +58,11 @@ class ModelConfig:
             "sale_days",
         ]
     )
-    adstock_max_lag: int = 8
+    adstock_max_lag: int = 4
     target_accept: float = 0.95
     chains: int = 4
     draws: int = 1000
-    tune: int = 1000
+    tune: int = 2000
 
     def get_model_config(self) -> dict:
         """Return model_config dict with informative priors.

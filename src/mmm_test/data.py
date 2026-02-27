@@ -8,6 +8,15 @@ import pandas as pd
 
 from mmm_test.config import DATA_DIR, DATASET_ID, DROP_CHANNELS
 
+# Channel groups to reduce multicollinearity.
+# Digital+SEM+Content.Marketing (r>0.91), Online.marketing+Affiliates (r=0.99).
+CHANNEL_GROUPS: dict[str, list[str]] = {
+    "TV": ["TV"],
+    "Sponsorship": ["Sponsorship"],
+    "Digital": ["Digital", "SEM", "Content.Marketing"],
+    "Online": ["Online.marketing", "Affiliates"],
+}
+
 # MediaInvestment.csv values are in crores; multiply to get absolute rupees.
 _MEDIA_SCALE_FACTOR = 1e7
 
@@ -26,6 +35,52 @@ _CHANNEL_COLUMNS = [
     "Affiliates",
     "SEM",
 ]
+
+_GROUPED_CHANNEL_COLUMNS = list(CHANNEL_GROUPS.keys())
+
+
+def aggregate_channel_groups(
+    df: pd.DataFrame,
+    groups: dict[str, list[str]] | None = None,
+) -> pd.DataFrame:
+    """Sum raw channel columns into grouped channels to reduce multicollinearity.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the raw channel columns.
+    groups : dict[str, list[str]] | None, optional
+        Mapping of group name to list of raw channel column names.
+        Defaults to ``CHANNEL_GROUPS``.
+
+    Returns
+    -------
+    pd.DataFrame
+        Copy of *df* with raw channel columns replaced by grouped columns.
+
+    Raises
+    ------
+    ValueError
+        If any source column listed in *groups* is missing from *df*.
+    """
+    if groups is None:
+        groups = CHANNEL_GROUPS
+
+    all_sources: list[str] = []
+    for sources in groups.values():
+        all_sources.extend(sources)
+    missing = [c for c in all_sources if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing source channel columns: {missing}")
+
+    df = df.copy()
+    for group_name, sources in groups.items():
+        df[group_name] = df[sources].sum(axis=1)
+
+    # Drop the original raw columns that are no longer needed
+    cols_to_drop = [c for c in all_sources if c not in groups]
+    df = df.drop(columns=cols_to_drop, errors="ignore")
+    return df
 
 
 def download_dataset(force: bool = False) -> Path:
@@ -529,6 +584,9 @@ def load_mmm_weekly_data(force_download: bool = False) -> pd.DataFrame:
     # (e.g., a Monday in June when data starts in July)
     df = df.dropna(subset=["NPS"]).reset_index(drop=True)
 
+    # Aggregate correlated channels into groups (7 → 4)
+    df = aggregate_channel_groups(df)
+
     validate_mmm_weekly_data(df)
     return df
 
@@ -550,7 +608,7 @@ def validate_mmm_weekly_data(df: pd.DataFrame) -> None:
     required_columns = [
         "Date",
         "total_gmv",
-        *_CHANNEL_COLUMNS,
+        *_GROUPED_CHANNEL_COLUMNS,
         "NPS",
         "total_Discount",
         "sale_days",
@@ -562,7 +620,7 @@ def validate_mmm_weekly_data(df: pd.DataFrame) -> None:
     if df["total_gmv"].isna().any():
         raise ValueError("Target column 'total_gmv' contains null values")
 
-    for col in _CHANNEL_COLUMNS:
+    for col in _GROUPED_CHANNEL_COLUMNS:
         if df[col].isna().any():
             raise ValueError(f"Channel column '{col}' contains null values")
 

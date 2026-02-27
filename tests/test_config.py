@@ -8,14 +8,15 @@ def test_default_config():
     config = ModelConfig()
     assert config.date_column == "Date"
     assert config.target_column == "total_gmv"
-    assert len(config.channel_columns) == 7
+    assert len(config.channel_columns) == 4
     assert "TV" in config.channel_columns
-    assert "SEM" in config.channel_columns
+    assert "Online" in config.channel_columns
     assert config.control_columns == ["NPS", "total_Discount", "sale_days"]
-    assert config.adstock_max_lag == 8
+    assert config.adstock_max_lag == 4
     assert config.target_accept == 0.95
     assert config.chains == 4
     assert config.draws == 1000
+    assert config.tune == 2000
 
 
 def test_custom_config():

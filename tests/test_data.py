@@ -5,6 +5,7 @@ import pandas as pd
 import pytest
 
 from mmm_test.data import (
+    aggregate_channel_groups,
     aggregate_weekly_gmv,
     compute_sale_days,
     compute_weekly_sale_days,
@@ -209,6 +210,49 @@ def test_compute_weekly_sale_days(tmp_path):
     assert result.loc[1, "sale_days"] == 2  # Jul 13 week — Jul 18, 19
     assert result.loc[2, "sale_days"] == 1  # Jul 20 week — Jul 20
     assert result.loc[3, "sale_days"] == 0  # Jul 27 week — no events
+
+
+def test_aggregate_channel_groups_default():
+    """Test that aggregate_channel_groups sums raw channels into groups."""
+    df = pd.DataFrame(
+        {
+            "Date": pd.date_range("2015-07-06", periods=3, freq="W-MON"),
+            "TV": [100, 200, 300],
+            "Digital": [10, 20, 30],
+            "SEM": [5, 10, 15],
+            "Content.Marketing": [1, 2, 3],
+            "Online.marketing": [50, 60, 70],
+            "Affiliates": [25, 30, 35],
+            "Sponsorship": [400, 500, 600],
+        }
+    )
+    result = aggregate_channel_groups(df)
+    assert list(result["TV"]) == [100, 200, 300]
+    assert list(result["Sponsorship"]) == [400, 500, 600]
+    # Digital = Digital + SEM + Content.Marketing
+    assert list(result["Digital"]) == [16, 32, 48]
+    # Online = Online.marketing + Affiliates
+    assert list(result["Online"]) == [75, 90, 105]
+    # Raw columns should be dropped
+    for col in ["SEM", "Content.Marketing", "Online.marketing", "Affiliates"]:
+        assert col not in result.columns
+
+
+def test_aggregate_channel_groups_missing_column():
+    """Test that aggregate_channel_groups raises on missing source columns."""
+    df = pd.DataFrame({"TV": [1], "Sponsorship": [2]})
+    with pytest.raises(ValueError, match="Missing source channel columns"):
+        aggregate_channel_groups(df)
+
+
+def test_aggregate_channel_groups_custom_groups():
+    """Test aggregate_channel_groups with custom group mapping."""
+    df = pd.DataFrame({"a": [1, 2], "b": [3, 4], "c": [5, 6]})
+    result = aggregate_channel_groups(df, groups={"ab": ["a", "b"], "c": ["c"]})
+    assert list(result["ab"]) == [4, 6]
+    assert list(result["c"]) == [5, 6]
+    assert "a" not in result.columns
+    assert "b" not in result.columns
 
 
 def test_validate_mmm_weekly_data_passes(mmm_weekly_sample_dataframe):

@@ -70,6 +70,7 @@ def fit_model(
         draws=config.draws,
         tune=config.tune,
         target_accept=config.target_accept,
+        init="advi+adapt_diag",
     )
     return model.idata
 

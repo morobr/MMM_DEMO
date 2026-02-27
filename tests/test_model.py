@@ -26,11 +26,11 @@ def test_build_model_adstock_max_lag(real_config):
     assert model.adstock.l_max == real_config.adstock_max_lag
 
 
-def test_build_model_default_adstock_is_8():
-    """Test that default config uses l_max=8 for weekly data."""
+def test_build_model_default_adstock_is_4():
+    """Test that default config uses l_max=4 for weekly data with grouped channels."""
     config = ModelConfig()
     model = build_model(config)
-    assert model.adstock.l_max == 8
+    assert model.adstock.l_max == 4
 
 
 def test_build_model_with_controls(real_config):

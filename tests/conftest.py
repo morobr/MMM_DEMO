@@ -51,7 +51,27 @@ def sample_dataframe() -> pd.DataFrame:
 
 @pytest.fixture
 def mmm_sample_dataframe() -> pd.DataFrame:
-    """Create synthetic DataFrame mimicking the actual DT Mart MMM schema."""
+    """Create synthetic DataFrame mimicking the DT Mart MMM schema (grouped)."""
+    n = 12
+    rng = np.random.default_rng(42)
+    return pd.DataFrame(
+        {
+            "Date": pd.date_range("2015-07-01", periods=n, freq="MS"),
+            "total_gmv": rng.uniform(1.5e8, 5.5e8, n),
+            "TV": rng.uniform(0, 9.3e7, n),
+            "Sponsorship": rng.uniform(1.1e7, 8.47e8, n),
+            "Digital": rng.uniform(1e7, 4.8e8, n),
+            "Online": rng.uniform(2e6, 3.2e8, n),
+            "NPS": rng.uniform(44, 60, n),
+            "total_Discount": rng.uniform(1.2e8, 4.2e8, n),
+            "sale_days": rng.integers(0, 10, n),
+        }
+    )
+
+
+@pytest.fixture
+def mmm_raw_sample_dataframe() -> pd.DataFrame:
+    """Create synthetic DataFrame with raw (ungrouped) 7-channel monthly schema."""
     n = 12
     rng = np.random.default_rng(42)
     return pd.DataFrame(
@@ -74,7 +94,7 @@ def mmm_sample_dataframe() -> pd.DataFrame:
 
 @pytest.fixture
 def mmm_weekly_sample_dataframe() -> pd.DataFrame:
-    """Create synthetic weekly DataFrame mimicking the weekly MMM schema."""
+    """Create synthetic weekly DataFrame mimicking the weekly MMM schema (grouped)."""
     n = 52
     rng = np.random.default_rng(42)
     return pd.DataFrame(
@@ -82,12 +102,9 @@ def mmm_weekly_sample_dataframe() -> pd.DataFrame:
             "Date": pd.date_range("2015-06-29", periods=n, freq="W-MON"),
             "total_gmv": rng.uniform(2e7, 1.5e8, n),
             "TV": rng.uniform(0, 2.5e7, n),
-            "Digital": rng.uniform(1e6, 3e7, n),
             "Sponsorship": rng.uniform(2e6, 2e8, n),
-            "Content.Marketing": rng.uniform(0, 8e6, n),
-            "Online.marketing": rng.uniform(2e5, 6e7, n),
-            "Affiliates": rng.uniform(2e5, 1.8e7, n),
-            "SEM": rng.uniform(1e6, 8e7, n),
+            "Digital": rng.uniform(2e6, 1.2e8, n),
+            "Online": rng.uniform(4e5, 7.8e7, n),
             "NPS": rng.uniform(44, 60, n),
             "total_Discount": rng.uniform(2e7, 1e8, n),
             "sale_days": rng.integers(0, 5, n),
