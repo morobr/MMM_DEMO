@@ -5,6 +5,8 @@
 [![PyMC-Marketing](https://img.shields.io/badge/PyMC--Marketing-latest-orange.svg)](https://github.com/pymc-labs/pymc-marketing)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+> Also available in: [English](README.md)
+
 > **Uma demonstração em nível de produção de Marketing Mix Modeling (MMM) Bayesiano usando PyMC-Marketing.**
 > Construído com dados reais do varejo indiano para demonstrar atribuição de canais de ponta a ponta,
 > modelagem de adstock/saturação e otimização de orçamento baseada em dados.
