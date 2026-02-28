@@ -148,9 +148,9 @@ MMM_DEMO/
 ├── notebooks/                     # Progressive demo sequence
 │   ├── 01_data_exploration.ipynb
 │   ├── 02_model_fitting.ipynb
-│   ├── 03_diagnostics.ipynb       # (planned)
-│   ├── 04_contributions.ipynb     # (planned)
-│   └── 05_optimization.ipynb      # (planned)
+│   ├── 03_diagnostics.ipynb
+│   ├── 04_contributions.ipynb
+│   └── 05_optimization.ipynb
 │
 ├── scripts/
 │   └── run_pipeline.py            # End-to-end pipeline runner (planned)
@@ -336,7 +336,6 @@ uv run pytest tests/test_data.py -v
 
 This is a demo project. Known gaps and logical next steps:
 
-- [ ] Complete notebooks 03–05 (diagnostics, contributions, optimization)
 - [ ] Add `scripts/run_pipeline.py` for headless end-to-end execution
 - [ ] Time-varying adstock decay (non-stationary carryover)
 - [ ] Holdout validation (train/test split for out-of-sample evaluation)

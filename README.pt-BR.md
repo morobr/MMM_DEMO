@@ -149,9 +149,9 @@ MMM_DEMO/
 ├── notebooks/                     # Sequência progressiva do demo
 │   ├── 01_data_exploration.ipynb
 │   ├── 02_model_fitting.ipynb
-│   ├── 03_diagnostics.ipynb       # (planejado)
-│   ├── 04_contributions.ipynb     # (planejado)
-│   └── 05_optimization.ipynb      # (planejado)
+│   ├── 03_diagnostics.ipynb
+│   ├── 04_contributions.ipynb
+│   └── 05_optimization.ipynb
 │
 ├── scripts/
 │   └── run_pipeline.py            # Executor do pipeline de ponta a ponta (planejado)
@@ -337,7 +337,6 @@ uv run pytest tests/test_data.py -v
 
 Este é um projeto de demonstração. Lacunas conhecidas e próximos passos lógicos:
 
-- [ ] Completar notebooks 03–05 (diagnósticos, contribuições, otimização)
 - [ ] Adicionar `scripts/run_pipeline.py` para execução end-to-end sem interface
 - [ ] Decaimento de adstock variante no tempo (carryover não-estacionário)
 - [ ] Validação holdout (divisão treino/teste para avaliação fora da amostra)
