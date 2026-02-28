@@ -58,3 +58,8 @@ known-first-party = ["mmm_demo"]
 
 [tool.ruff.lint.per-file-ignores]
 "notebooks/**" = ["E402", "E501", "B007", "RUF001", "RUF005"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.1",
+]
