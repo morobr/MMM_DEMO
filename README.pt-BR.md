@@ -154,7 +154,7 @@ MMM_DEMO/
 │   └── 05_optimization.ipynb
 │
 ├── scripts/
-│   └── run_pipeline.py            # Executor do pipeline de ponta a ponta (planejado)
+│   └── run_pipeline.py            # Executor do pipeline de ponta a ponta
 │
 ├── src/
 │   └── mmm_demo/
@@ -337,7 +337,6 @@ uv run pytest tests/test_data.py -v
 
 Este é um projeto de demonstração. Lacunas conhecidas e próximos passos lógicos:
 
-- [ ] Adicionar `scripts/run_pipeline.py` para execução end-to-end sem interface
 - [ ] Decaimento de adstock variante no tempo (carryover não-estacionário)
 - [ ] Validação holdout (divisão treino/teste para avaliação fora da amostra)
 - [ ] Múltiplos cenários de orçamento (conservador, base, agressivo)

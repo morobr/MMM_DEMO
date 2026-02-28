@@ -7,8 +7,10 @@ from pymc_marketing.prior import Prior
 
 # Dataset
 DATASET_ID = "datatattle/dt-mart-market-mix-modeling"
-DATA_DIR = Path("data")
-OUTPUTS_DIR = Path("outputs")
+# Anchor to project root: src/mmm_demo/config.py → up three levels
+_PROJECT_ROOT = Path(__file__).parent.parent.parent
+DATA_DIR = _PROJECT_ROOT / "data"
+OUTPUTS_DIR = _PROJECT_ROOT / "outputs"
 
 # Channels excluded due to excessive missing data (9/12 NaN)
 DROP_CHANNELS: list[str] = ["Radio", "Other"]
