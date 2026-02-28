@@ -153,7 +153,7 @@ MMM_DEMO/
 │   └── 05_optimization.ipynb
 │
 ├── scripts/
-│   └── run_pipeline.py            # End-to-end pipeline runner (planned)
+│   └── run_pipeline.py            # End-to-end pipeline runner
 │
 ├── src/
 │   └── mmm_demo/
@@ -336,7 +336,6 @@ uv run pytest tests/test_data.py -v
 
 This is a demo project. Known gaps and logical next steps:
 
-- [ ] Add `scripts/run_pipeline.py` for headless end-to-end execution
 - [ ] Time-varying adstock decay (non-stationary carryover)
 - [ ] Holdout validation (train/test split for out-of-sample evaluation)
 - [ ] Multiple budget scenarios (conservative, base, aggressive)
